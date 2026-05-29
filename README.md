@@ -278,9 +278,22 @@ DD_DATA_STREAMS_ENABLED=true DD_TRACE_AGENT_URL=http://localhost:8126 \
   ddtrace-run python kinesis/consumer.py
 ```
 
-Watch the consumer lag metric build in the Datadog DSM view. The lag increases
-at 3 seconds per record consumed -- with the producer publishing 1 record/second,
-the consumer falls further behind in real time.
+In Datadog, navigate to **APM -> Data Streams Monitoring**. Hover over the
+`stream/datadog-dsm-demo` node (the middle bubble in the topology map):
+
+```
+Max time in queue    2m 30s   (and growing)
+Incoming             0.8 msgs/s
+Outgoing             0.32 msgs/s
+```
+
+**Max time in queue** is the lag metric -- the age of the oldest unprocessed
+record in the stream. As the consumer falls behind, this value increases
+continuously. Incoming (0.8 msgs/s) exceeds outgoing (0.32 msgs/s): the
+consumer is processing at 40% of the rate needed to keep pace.
+
+To restore normal speed: Ctrl+C the lag consumer, then run `make run-consumer_dsm`
+(or `make run-consumer_dbm` if using the DBM consumer). The lag drains back to zero.
 
 ## Demo: APM Traces (Zero Additional Setup)
 
