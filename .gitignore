@@ -1,0 +1,18 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.python-version
+venv/
+.venv/
+*.egg-info/
+.DS_Store
+*.log
+cdk.out/
+.terraform/
+terraform.tfstate*
+
+# Local build variants and artifacts
+README.*.md
+datadog-status.txt
+docs/superpowers/

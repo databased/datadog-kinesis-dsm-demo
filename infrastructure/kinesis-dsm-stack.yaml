@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Kinesis Data Stream + IAM roles + S3 output bucket for Datadog DSM demo'
+
+Parameters:
+  StreamName:
+    Type: String
+    Default: 'datadog-dsm-demo'
+    Description: 'Name for the Kinesis Data Stream'
+  ShardCount:
+    Type: Number
+    Default: 1
+    Description: 'Number of shards (1 is sufficient for demo)'
+
+Resources:
+
+  KinesisStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: !Ref StreamName
+      ShardCount: !Ref ShardCount
+      RetentionPeriodHours: 24
+
+  ProducerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${StreamName}-producer-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - kinesis:PutRecord
+              - kinesis:PutRecords
+              - kinesis:DescribeStream
+              - kinesis:DescribeStreamSummary
+              - kinesis:ListShards
+            Resource: !GetAtt KinesisStream.Arn
+
+  ConsumerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${StreamName}-consumer-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - kinesis:GetRecords
+              - kinesis:GetShardIterator
+              - kinesis:DescribeStream
+              - kinesis:DescribeStreamSummary
+              - kinesis:ListShards
+            Resource: !GetAtt KinesisStream.Arn
+
+  OutputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${StreamName}-consumer-output-${AWS::AccountId}'
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteAfter7Days
+            Status: Enabled
+            ExpirationInDays: 7
+
+Outputs:
+  StreamName:
+    Description: 'Kinesis stream name -- use as KINESIS_STREAM_NAME in .env'
+    Value: !Ref KinesisStream
+    Export:
+      Name: !Sub '${AWS::StackName}-StreamName'
+
+  StreamArn:
+    Description: 'Kinesis stream ARN -- use as KINESIS_STREAM_ARN in .env (required for DSM)'
+    Value: !GetAtt KinesisStream.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-StreamArn'
+
+  OutputBucketName:
+    Description: 'S3 bucket for consumer output'
+    Value: !Ref OutputBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-OutputBucket'
+
+  ProducerPolicyArn:
+    Description: 'Attach this policy to any IAM user/role running producer.py'
+    Value: !Ref ProducerPolicy
+
+  ConsumerPolicyArn:
+    Description: 'Attach this policy to any IAM user/role running consumer.py'
+    Value: !Ref ConsumerPolicy
